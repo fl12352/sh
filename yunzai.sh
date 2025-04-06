@@ -3,7 +3,6 @@
 #风铃的云崽一键
 #2025.4.6
  
- 
 if [ $EUID -ne 0 ]; then
     echo "请先输入sudo su root 切换成root权限"
     exit
