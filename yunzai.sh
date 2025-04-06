@@ -76,7 +76,7 @@ pnpm config set registry https://registry.npmmirror.com/
 pnpm i
 echo "安装依赖完成"
 echo "云崽本体安装完成"
-
+ 
 echo "安装ffmpeg转码工具"
 apt install ffmpeg -y
 echo "脚本结束，恭喜你部署完成！"
