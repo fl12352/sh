@@ -73,28 +73,72 @@ declare -A REPOS=(
     ["https://bgithub.xyz/liuly0322/l-plugin"]="L插件 (l-plugin)"
 )
 
+# 检查是否支持whiptail
+if ! command -v whiptail &> /dev/null; then
+    echo -e "\033[33m[警告]\033[0m whiptail 不可用，将使用简单文本选择方式"
+    USE_WHIPTAIL=false
+else
+    USE_WHIPTAIL=true
+fi
+
 # 创建选择列表
 selected_plugins=()
-PS3=$'\n请使用空格键选择要安装的插件(按回车确认选择): '
-options=()
-for repo in "${!REPOS[@]}"; do
-    repo_name=$(basename "$repo")
-    display_name=${REPOS[$repo]}
-    if [ -d "$repo_name" ]; then
-        options+=("$display_name [已安装]" "off")
-    else
-        options+=("$display_name" "off")
+if $USE_WHIPTAIL; then
+    # 使用whiptail的GUI选择方式
+    options=()
+    for repo in "${!REPOS[@]}"; do
+        repo_name=$(basename "$repo")
+        display_name=${REPOS[$repo]}
+        if [ -d "$repo_name" ]; then
+            options+=("$display_name" "[已安装]" "OFF")
+        else
+            options+=("$display_name" "" "OFF")
+        fi
+    done
+
+    # 使用whiptail显示多选菜单
+    choices=$(whiptail --title "插件选择" --separate-output --checklist \
+        "请选择要安装的插件(使用空格键选择,方向键移动):" 25 70 16 \
+        "${options[@]}" 3>&1 1>&2 2>&3)
+
+    # 如果用户取消选择，则退出脚本
+    if [ $? -ne 0 ]; then
+        echo -e "\033[33m[取消]\033[0m 用户取消了插件选择"
+        exit 0
     fi
-done
+else
+    # 使用简单的文本选择方式
+    echo -e "\033[36m[插件列表]\033[0m 请选择要安装的插件(输入编号，多个用空格分隔):"
+    index=0
+    plugin_index=()
+    for repo in "${!REPOS[@]}"; do
+        repo_name=$(basename "$repo")
+        display_name=${REPOS[$repo]}
+        index=$((index + 1))
+        plugin_index[$index]=$repo
+        if [ -d "$repo_name" ]; then
+            echo -e "  \033[33m$index. $display_name [已安装]\033[0m"
+        else
+            echo "  $index. $display_name"
+        fi
+    done
 
-# 使用whiptail显示多选菜单
-choices=$(whiptail --title "插件选择" --separate-output --checklist \
-"请选择要安装的插件(使用空格键选择,方向键移动):" 25 70 16 "${options[@]}" 3>&1 1>&2 2>&3)
+    read -rp "请输入要安装的插件编号(用空格分隔): " input_choices
+    if [ -z "$input_choices" ]; then
+        echo -e "\033[33m[跳过]\033[0m 没有选择任何插件"
+        exit 0
+    fi
 
-# 如果用户取消选择，则退出脚本
-if [ $? -ne 0 ]; then
-    echo -e "\033[33m[取消]\033[0m 用户取消了插件选择"
-    exit 0
+    # 处理用户输入
+    for choice in $input_choices; do
+        if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le $index ]; then
+            repo=${plugin_index[$choice]}
+            display_name=${REPOS[$repo]}
+            choices+="$display_name"$'\n'
+        else
+            echo -e "\033[31m[错误]\033[0m 无效的选择: $choice"
+        fi
+    done
 fi
 
 # 如果没有选择任何插件
@@ -105,11 +149,10 @@ fi
 
 # 准备安装选中的插件
 echo -e "\033[36m[准备安装]\033[0m 以下插件将被安装:"
-for choice in $choices; do
-    # 从选项中提取插件名称
-    plugin_name=$(echo "$choice" | sed 's/ [已安装]//g')
+while IFS= read -r plugin_name; do
+    [ -z "$plugin_name" ] && continue
     echo " - $plugin_name"
-done
+done <<< "$choices"
 
 read -rp "是否继续安装? [Y/n]: " confirm
 if [[ ${confirm,,} =~ ^(n|no)$ ]]; then
@@ -118,9 +161,8 @@ if [[ ${confirm,,} =~ ^(n|no)$ ]]; then
 fi
 
 # 安装选中的插件
-for choice in $choices; do
-    # 从选项中提取插件名称
-    plugin_name=$(echo "$choice" | sed 's/ [已安装]//g')
+while IFS= read -r plugin_name; do
+    [ -z "$plugin_name" ] && continue
     
     # 查找对应的仓库URL
     for repo in "${!REPOS[@]}"; do
@@ -172,7 +214,7 @@ for choice in $choices; do
             break
         fi
     done
-done
+done <<< "$choices"
 
 echo "克隆执行完成，正在安装依赖..."
 pnpm i
