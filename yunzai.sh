@@ -2,7 +2,41 @@
 
 # ANSI颜色代码
 GREEN='\033[0;32m'  # 绿色
+YELLOW='\033[1;33m' # 黄色
+RED='\033[0;31m'    # 红色
 NC='\033[0m'        # 恢复默认颜色
+
+# ===================== 系统检测 =====================
+echo -e "${YELLOW}====== 系统检测 ======${NC}"
+
+# 显示当前时间
+echo -e "${GREEN}当前时间: $(date '+%Y-%m-%d %H:%M:%S %Z')${NC}"
+
+# 检测系统信息
+if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    echo -e "${GREEN}操作系统: ${PRETTY_NAME}${NC}"
+    echo -e "${GREEN}系统架构: $(uname -m)${NC}"
+    echo -e "${GREEN}内核版本: $(uname -r)${NC}"
+else
+    echo -e "${RED}警告: 无法检测操作系统信息${NC}"
+fi
+
+# 检测是否为root用户
+if [ "$(id -u)" -ne 0 ]; then
+    echo -e "${RED}错误: 请使用root用户或sudo运行此脚本${NC}"
+    exit 1
+fi
+
+# 检测内存和磁盘空间
+echo -e "${GREEN}内存信息:${NC}"
+free -h
+echo -e "${GREEN}磁盘空间:${NC}"
+df -h /
+
+# 等待3秒让用户查看系统信息
+echo -e "${YELLOW}5秒后开始安装...${NC}"
+sleep 5
 
 # 更新软件包列表
 echo -e "${GREEN}更新软件包列表...${NC}"
