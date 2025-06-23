@@ -55,8 +55,8 @@ declare -a PLUGIN_REPOS=(
     "https://gitee.com/Rrrrrrray/mora-plugin"
     "https://gitee.com/wind-trace-typ/wind-plugin"
     "https://bgithub.xyz/liangshi233/liangshi-calc"
-    "https://gitee.com/yoimiya-kokomi/miao-plugin"
-    "https://gitee.com/guoba-yunzai/guoba-plugin"
+    "https://bgithub.xyz/yoimiya-kokomi/miao-plugin"
+    "https://gitee.com/guoba-yunzai/Guoba-Plugin"
     "https://gitee.com/Nwflower/atlas"
     "https://bgithub.xyz/GangFaDeShenMe/yunzai-yt-dl-plugin"
     "https://bgithub.xyz/XasYer/YePanel"
@@ -226,7 +226,7 @@ function install_plugin() {
             "yenai-plugin") pnpm install >/dev/null 2>&1 ;;
             "chatgpt-plugin") cd "$repo_name" && pnpm install >/dev/null 2>&1 ;;
             "waves-plugin") pnpm install --filter=waves-plugin >/dev/null 2>&1 ;;
-            "guoba-plugin") pnpm install --filter=guoba-plugin >/dev/null 2>&1 ;;
+            "Guoba-Plugin") pnpm install --filter=guoba-plugin >/dev/null 2>&1 ;;
             "rconsole-plugin") pnpm i --filter=rconsole-plugin >/dev/null 2>&1 ;;
         esac
     else
