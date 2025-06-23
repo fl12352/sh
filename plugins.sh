@@ -26,7 +26,7 @@ declare -A REPOS=(
     ["https://gitee.com/Rrrrrrray/mora-plugin"]="摩拉插件 (mora-plugin)"
     ["https://gitee.com/wind-trace-typ/wind-plugin"]="风插件 (wind-plugin)"
     ["https://bgithub.xyz/liangshi233/liangshi-calc"]="梁氏伤害计算 (liangshi-calc)"
-    ["https://bgithub.xyz/yoimiya-kokomi/miao-plugin"]="喵喵插件 (miao-plugin)"
+    ["https://gitee.com/yoimiya-kokomi/miao-plugin"]="喵喵插件 (miao-plugin)"
     ["https://gitee.com/guoba-yunzai/guoba-plugin"]="锅巴插件 (guoba-plugin)"
     ["https://gitee.com/Nwflower/atlas"]="图鉴插件 (atlas)"
     ["https://bgithub.xyz/GangFaDeShenMe/yunzai-yt-dl-plugin"]="YouTube下载插件 (yunzai-yt-dl-plugin)"
@@ -73,73 +73,104 @@ declare -A REPOS=(
     ["https://bgithub.xyz/liuly0322/l-plugin"]="L插件 (l-plugin)"
 )
 
+# 创建选择列表
+selected_plugins=()
+PS3=$'\n请使用空格键选择要安装的插件(按回车确认选择): '
+options=()
 for repo in "${!REPOS[@]}"; do
     repo_name=$(basename "$repo")
     display_name=${REPOS[$repo]}
-    
     if [ -d "$repo_name" ]; then
-        echo -e "\033[33m[跳过]\033[0m 已安装: $display_name"
-        continue
+        options+=("$display_name [已安装]" "off")
+    else
+        options+=("$display_name" "off")
     fi
+done
+
+# 使用whiptail显示多选菜单
+choices=$(whiptail --title "插件选择" --separate-output --checklist \
+"请选择要安装的插件(使用空格键选择,方向键移动):" 25 70 16 "${options[@]}" 3>&1 1>&2 2>&3)
+
+# 如果用户取消选择，则退出脚本
+if [ $? -ne 0 ]; then
+    echo -e "\033[33m[取消]\033[0m 用户取消了插件选择"
+    exit 0
+fi
+
+# 如果没有选择任何插件
+if [ -z "$choices" ]; then
+    echo -e "\033[33m[跳过]\033[0m 没有选择任何插件"
+    exit 0
+fi
+
+# 准备安装选中的插件
+echo -e "\033[36m[准备安装]\033[0m 以下插件将被安装:"
+for choice in $choices; do
+    # 从选项中提取插件名称
+    plugin_name=$(echo "$choice" | sed 's/ [已安装]//g')
+    echo " - $plugin_name"
+done
+
+read -rp "是否继续安装? [Y/n]: " confirm
+if [[ ${confirm,,} =~ ^(n|no)$ ]]; then
+    echo -e "\033[33m[取消]\033[0m 用户取消了安装"
+    exit 0
+fi
+
+# 安装选中的插件
+for choice in $choices; do
+    # 从选项中提取插件名称
+    plugin_name=$(echo "$choice" | sed 's/ [已安装]//g')
     
-    invalid_attempts=0
-    while true; do
-        read -rp "是否安装 $display_name ? [Y/n]: " answer
-        case ${answer,,} in
-            y|yes|"")
-                echo -e "\033[36m[正在安装]\033[0m $display_name"
-                git clone "$repo"
-                
-                if [ $? -eq 0 ]; then
-                    if [ "$repo_name" == "FanSky_Qs" ]; then
+    # 查找对应的仓库URL
+    for repo in "${!REPOS[@]}"; do
+        if [[ "${REPOS[$repo]}" == "$plugin_name" ]]; then
+            repo_name=$(basename "$repo")
+            
+            if [ -d "$repo_name" ]; then
+                echo -e "\033[33m[跳过]\033[0m 已安装: $plugin_name"
+                continue
+            fi
+            
+            echo -e "\033[36m[正在安装]\033[0m $plugin_name"
+            git clone "$repo"
+            
+            if [ $? -eq 0 ]; then
+                # 特殊插件的依赖安装
+                case "$repo_name" in
+                    "FanSky_Qs")
                         echo -e "\033[36m[正在安装依赖]\033[0m 进入 FanSky_Qs 目录..."
                         cd FanSky_Qs && pnpm install && cd ..
                         echo -e "\033[32m[依赖安装完成]\033[0m FanSky_Qs"
-                    fi
-
-                    if [ "$repo_name" == "yenai-plugin" ]; then
+                        ;;
+                    "yenai-plugin")
                         echo -e "\033[36m[正在安装依赖]\033[0m 开始安装..."
                         pnpm install
                         echo -e "\033[32m[依赖安装完成]\033[0m yenai-plugin"
-                    fi
-
-                    if [ "$repo_name" == "waves-plugin" ]; then
+                        ;;
+                    "waves-plugin")
                         echo -e "\033[36m[正在安装依赖]\033[0m 为 waves-plugin 安装特殊依赖..."
                         pnpm install --filter=waves-plugin
                         echo -e "\033[32m[依赖安装完成]\033[0m waves-plugin 特殊依赖"
-                    fi
-
-                    if [ "$repo_name" == "chatgpt-plugin" ]; then
+                        ;;
+                    "chatgpt-plugin")
                         echo -e "\033[36m[正在安装依赖]\033[0m 进入 chatgpt-plugin 目录..."
                         cd chatgpt-plugin && pnpm i && cd ..
                         echo -e "\033[32m[依赖安装完成]\033[0m chatgpt-plugin"
-                    fi
-
-                    if [ "$repo_name" == "guoba-plugin" ]; then
+                        ;;
+                    "guoba-plugin")
                         echo -e "\033[36m[正在安装依赖]"
                         pnpm install --filter=guoba-plugin
                         echo -e "\033[32m[依赖安装完成]\033[0m guoba-plugin"
-                    fi
-                    
-                    echo -e "\033[32m[成功]\033[0m $display_name 安装完成"
-                else
-                    echo -e "\033[31m[失败]\033[0m $display_name 安装失败"
-                fi
-                break
-                ;;
-            n|no)
-                echo -e "\033[33m[跳过]\033[0m 用户取消安装: $display_name"
-                break
-                ;;
-            *)
-                invalid_attempts=$((invalid_attempts + 1))
-                if [ $invalid_attempts -ge 3 ]; then
-                    echo -e "\033[31m错误: 连续3次无效输入，脚本终止\033[0m"
-                    exit 1
-                fi
-                echo -e "\033[31m错误: 无效输入 (剩余尝试次数 $((3 - invalid_attempts)))\033[0m"
-                ;;
-        esac
+                        ;;
+                esac
+                
+                echo -e "\033[32m[成功]\033[0m $plugin_name 安装完成"
+            else
+                echo -e "\033[31m[失败]\033[0m $plugin_name 安装失败"
+            fi
+            break
+        fi
     done
 done
 
