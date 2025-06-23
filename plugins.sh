@@ -222,12 +222,12 @@ function install_plugin() {
         
         # 特殊插件依赖处理
         case "$repo_name" in
-            "FanSky_Qs") (cd "$repo_name" && pnpm install >/dev/null 2>&1) ;;
-            "yenai-plugin") pnpm install >/dev/null 2>&1 ;;
-            "chatgpt-plugin") cd "$repo_name" && pnpm install >/dev/null 2>&1 ;;
-            "waves-plugin") pnpm install --filter=waves-plugin >/dev/null 2>&1 ;;
-            "Guoba-Plugin") pnpm install --filter=guoba-plugin >/dev/null 2>&1 ;;
-            "rconsole-plugin") pnpm i --filter=rconsole-plugin >/dev/null 2>&1 ;;
+            "FanSky_Qs") (cd "$repo_name" && pnpm install) >/dev/null 2>&1 ;;
+            "yenai-plugin") (cd .. && pnpm install) >/dev/null 2>&1 ;;
+            "chatgpt-plugin") (cd "$repo_name" && pnpm install) >/dev/null 2>&1 ;;
+            "waves-plugin") (cd .. && pnpm install --filter=waves-plugin) >/dev/null 2>&1 ;;
+            "Guoba-Plugin") (cd .. && pnpm install --filter=guoba-plugin) >/dev/null 2>&1 ;;
+            "rconsole-plugin") (cd .. && pnpm i --filter=rconsole-plugin) >/dev/null 2>&1 ;;
         esac
     else
         if $VERBOSE; then
