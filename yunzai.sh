@@ -1,76 +1,153 @@
-#! /bin/bash
- 
-#风铃的云崽一键
-#2025.4.6
- 
-echo "开始安装和更新相关环境依赖"
-apt update
-apt-get install -y sudo
-apt-get install -y curl
-apt list --upgradable
-apt upgrade -y
-apt autoremove -y
-apt install wget -y
-apt install git -y
- 
-#安装nodejs
-echo "开始安装nodejs"
-#/dev/null相当于一个黑洞，任何输出信息都会直接丢失，此处表示将标准输出(1) 以及标准错误输出(2)都重定向到null中去，即不输出
-#若type有输出，则exit code 为0
-if ! type node >/dev/null 2>&1; then
-    curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - #curl的-s表示不输出错误和进度信息，-L表示让http请求跟随服务器的重定向
-    sudo apt install -y nodejs
-else
-    echo "nodejs已安装"
-fi
-echo "安装nodejs完成"
- 
-#若没有npm则安装npm
-if ! type npm >/dev/null 2>&1; then
-    apt install npm -y
-    echo 'npm安装成功'
-else
-    echo 'npm已安装'
-fi
- 
-#安装并运行redis
-echo "开始安装redis"
-apt install redis -y
-echo "redis安装完成"
- 
-#安装chromium浏览器
-echo "开始安装chromium浏览器"
-sudo apt install -y chromium
-echo "安装chromium完成"
- 
-#安装中文字体
-echo "开始安装中文字体"
-sudo apt install ttf-wqy-zenhei
-echo "安装中文字体完成"
- 
-#克隆云崽本体
-echo "开始克隆TRSS-Yunzai"
-if [ ! -d "Yunzai/" ]; then #如果不存在Yunzai-Bot文件夹,-d表示是否存在文件夹
-    git clone --depth 1 https://gitee.com/TimeRainStarSky/Yunzai
-    if [ ! -d "Yunzai/" ]; then
-        echo "克隆失败"
-        exit 0
+#!/bin/bash
+
+# ANSI颜色代码
+GREEN='\033[0;32m'  # 绿色
+NC='\033[0m'        # 恢复默认颜色
+
+# 更新软件包列表
+echo -e "${GREEN}更新软件包列表...${NC}"
+sudo apt update
+
+# 安装Git（检测是否已安装）
+if ! command -v git &> /dev/null; then
+    echo -e "${GREEN}安装Git...${NC}"
+    sudo apt install -y git
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}Git安装成功！${NC}"
     else
-        echo "克隆完成"
+        echo -e "${GREEN}Git安装失败，请检查错误信息。${NC}"
+        exit 1
     fi
 else
-    echo "TRSS-Yunzai已安装"
+    echo -e "${GREEN}Git 已安装，跳过。${NC}"
 fi
- 
-cd Yunzai/
-echo "开始安装依赖"
-npm config set registry https://registry.npmmirror.com/
-npm i -g pnpm
-pnpm config set registry https://registry.npmmirror.com/
-pnpm i
-echo "安装依赖完成"
-echo "云崽本体安装完成"
- 
-echo "安装ffmpeg转码工具"
-apt install ffmpeg -y
-echo "脚本结束，恭喜你部署完成！"
+
+# 安装Node.js（检测是否已安装）
+if ! command -v node &> /dev/null; then
+    echo -e "${GREEN}安装Node.js...${NC}"
+    curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
+    sudo apt update
+    sudo apt install -y nodejs
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}Node.js安装成功！${NC}"
+        echo -e "${GREEN}Node 版本: $(node --version)${NC}"
+        echo -e "${GREEN}npm 版本: $(npm --version)${NC}"
+        
+        # 安装pnpm（检测是否已安装）
+        if ! command -v pnpm &> /dev/null; then
+            echo -e "${GREEN}使用npm安装pnpm...${NC}"
+            sudo npm install -g pnpm
+            if [ $? -eq 0 ]; then
+                echo -e "${GREEN}pnpm安装成功！${NC}"
+                echo -e "${GREEN}pnpm 版本: $(pnpm --version)${NC}"
+            else
+                echo -e "${GREEN}pnpm安装失败，请检查错误信息。${NC}"
+                exit 1
+            fi
+        else
+            echo -e "${GREEN}pnpm 已安装，跳过。${NC}"
+        fi
+    else
+        echo -e "${GREEN}Node.js安装失败，请检查错误信息。${NC}"
+        exit 1
+    fi
+else
+    echo -e "${GREEN}Node.js 已安装，跳过。${NC}"
+    # 即使Node.js已安装，也检查pnpm
+    if ! command -v pnpm &> /dev/null; then
+        echo -e "${GREEN}使用npm安装pnpm...${NC}"
+        sudo npm install -g pnpm
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}pnpm安装成功！${NC}"
+            echo -e "${GREEN}pnpm 版本: $(pnpm --version)${NC}"
+        else
+            echo -e "${GREEN}pnpm安装失败，请检查错误信息。${NC}"
+            exit 1
+        fi
+    else
+        echo -e "${GREEN}pnpm 已安装，跳过。${NC}"
+    fi
+fi
+
+# 安装Redis（检测是否已安装）
+if ! command -v redis-server &> /dev/null; then
+    echo -e "${GREEN}安装Redis...${NC}"
+    sudo apt install -y redis-server
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}Redis安装成功！${NC}"
+        echo -e "${GREEN}启动Redis服务...${NC}"
+        sudo systemctl enable redis-server
+        sudo systemctl start redis-server
+        echo -e "${GREEN}Redis运行状态: $(sudo systemctl is-active redis-server)${NC}"
+    else
+        echo -e "${GREEN}Redis安装失败，请检查错误信息。${NC}"
+        exit 1
+    fi
+else
+    echo -e "${GREEN}Redis 已安装，跳过。${NC}"
+fi
+
+# 安装Google Chrome（检测是否已安装）
+if ! command -v google-chrome &> /dev/null; then
+    echo -e "${GREEN}安装Google Chrome...${NC}"
+    wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb -O /tmp/chrome.deb
+    sudo apt install -y /tmp/chrome.deb
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}Google Chrome安装成功！${NC}"
+        rm /tmp/chrome.deb
+    else
+        echo -e "${GREEN}Google Chrome安装失败，请检查错误信息。${NC}"
+        exit 1
+    fi
+else
+    echo -e "${GREEN}Google Chrome 已安装，跳过。${NC}"
+fi
+
+# 安装Google Noto CJK字体（检测是否已安装）
+if ! dpkg -l | grep -q fonts-noto-cjk; then
+    echo -e "${GREEN}安装Google Noto CJK字体...${NC}"
+    sudo apt install -y fonts-noto-cjk
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}Google Noto CJK字体安装成功！${NC}"
+    else
+        echo -e "${GREEN}Google Noto CJK字体安装失败，请检查错误信息。${NC}"
+        exit 1
+    fi
+else
+    echo -e "${GREEN}Google Noto CJK字体 已安装，跳过。${NC}"
+fi
+
+# 克隆Yunzai仓库
+echo -e "${GREEN}克隆Yunzai仓库...${NC}"
+if [ ! -d "Yunzai" ]; then
+    git clone --depth 1 https://gitee.com/TimeRainStarSky/Yunzai
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}Yunzai仓库克隆成功！${NC}"
+        
+        # 进入Yunzai目录并安装依赖
+        echo -e "${GREEN}进入Yunzai目录安装依赖...${NC}"
+        cd Yunzai && pnpm install
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}依赖安装成功！${NC}"
+        else
+            echo -e "${GREEN}依赖安装失败，请检查错误信息。${NC}"
+            exit 1
+        fi
+    else
+        echo -e "${GREEN}Yunzai仓库克隆失败，请检查错误信息。${NC}"
+        exit 1
+    fi
+else
+    echo -e "${GREEN}Yunzai目录已存在，跳过克隆。${NC}"
+    # 如果目录已存在，也尝试安装依赖
+    echo -e "${GREEN}进入已有Yunzai目录安装依赖...${NC}"
+    cd Yunzai && pnpm install
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}依赖安装成功！${NC}"
+    else
+        echo -e "${GREEN}依赖安装失败，请检查错误信息。${NC}"
+        exit 1
+    fi
+fi
+
+echo -e "${GREEN}安装完成！自行node app${NC}"
